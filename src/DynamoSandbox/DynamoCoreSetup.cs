@@ -66,8 +66,32 @@ namespace DynamoSandbox
                 StartupUtils.ASMPreloadFailure += ASMPreloadFailureHandler;
 
                 splashScreen = new Dynamo.UI.Views.SplashScreen();
-                splashScreen.DynamicSplashScreenReady += LoadDynamoView;
+                //splashScreen.DynamicSplashScreenReady += LoadDynamoView;
                 splashScreen.Show();
+
+                DynamoModel model;
+                model = StartupUtils.MakeModel(false, ASMPath ?? string.Empty, analyticsInfo);
+                model.CERLocation = CERLocation;
+
+                viewModel = DynamoViewModel.Start(
+                       new DynamoViewModel.StartConfiguration()
+                       {
+                           CommandFilePath = commandFilePath,
+                           DynamoModel = model,
+                           Watch3DViewModel =
+                               HelixWatch3DViewModel.TryCreateHelixWatch3DViewModel(
+                                   null,
+                                   new Watch3DViewModelStartupParams(model),
+                                   model.Logger),
+                           ShowLogin = true
+                       });
+
+                DynamoModel.OnRequestUpdateLoadBarStatus(new SplashScreenLoadEventArgs(Dynamo.Wpf.Properties.Resources.SplashScreenLaunchingDynamo, 70));
+                splashScreen.DynamoView = new DynamoView(viewModel);
+                splashScreen.OnRequestStaticSplashScreen();
+
+                splashScreen.DynamicSplashScreenReady -= LoadDynamoView;
+                Analytics.TrackStartupTime("DynamoSandbox", TimeSpan.FromMilliseconds(splashScreen.totalLoadingTime));
                 app.Run();
 
                 StartupUtils.ASMPreloadFailure -= ASMPreloadFailureHandler;
@@ -131,7 +155,7 @@ namespace DynamoSandbox
             }
         }
 
-        private void LoadDynamoView()
+        private void LoadDynamoView(object sender, System.EventArgs e)
         {
             DynamoModel model;
             model = StartupUtils.MakeModel(false, ASMPath ?? string.Empty, analyticsInfo);

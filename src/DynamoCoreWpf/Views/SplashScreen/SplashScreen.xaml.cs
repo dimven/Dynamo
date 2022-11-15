@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Reflection;
 using System.Runtime.InteropServices;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Xml.Serialization;
 using Dynamo.Configuration;
@@ -77,11 +78,6 @@ namespace Dynamo.UI.Views
         internal delegate void StaticSplashScreenReadyHandler();
 
         /// <summary>
-        /// This delegate is used in DynamicSplashScreenReady events
-        /// </summary>
-        public delegate void DynamicSplashScreenReadyHandler();
-
-        /// <summary>
         /// Event to throw for Splash Screen to show Dynamo static screen
         /// </summary>
         internal event StaticSplashScreenReadyHandler StaticSplashScreenReady;
@@ -89,15 +85,7 @@ namespace Dynamo.UI.Views
         /// <summary>
         /// Event to throw for Splash Screen to update Dynamo launching tasks
         /// </summary>
-        public event DynamicSplashScreenReadyHandler DynamicSplashScreenReady;
-
-        /// <summary>
-        /// Request to trigger DynamicSplashScreenReady event
-        /// </summary>
-        public void OnRequestDynamicSplashScreen()
-        {
-            DynamicSplashScreenReady?.Invoke();
-        }
+        public event EventHandler DynamicSplashScreenReady;
 
         /// <summary>
         /// Request to trigger StaticSplashScreenReady event
@@ -127,6 +115,17 @@ namespace Dynamo.UI.Views
             RequestImportSettings = ImportSettings;
             RequestSignIn = SignIn;
             RequestSignOut = SignOut;
+            Initialization();
+        }
+           
+        internal async void Initialization()
+        {
+            Dispatcher.BeginInvoke(
+                new Action(async () =>
+           {
+               await InitializeWebView2();
+           }));
+
         }
 
         private void WebView_NavigationCompleted(object sender, CoreWebView2NavigationCompletedEventArgs e)
@@ -136,7 +135,7 @@ namespace Dynamo.UI.Views
             {
                 webView.NavigationCompleted -= WebView_NavigationCompleted;
             }
-            OnRequestDynamicSplashScreen();
+            DynamicSplashScreenReady.Invoke(this, null);
         }
 
         /// <summary>
@@ -190,7 +189,10 @@ namespace Dynamo.UI.Views
             DynamoModel.RequestUpdateLoadBarStatus -= DynamoModel_RequestUpdateLoadBarStatus;
             StaticSplashScreenReady -= OnStaticScreenReady;
             Close();
-            Application.Current.MainWindow = dynamoView;
+            if (Application.Current != null)
+            {
+                Application.Current.MainWindow = dynamoView;
+            }
             dynamoView.Show();
             dynamoView.Activate();
         }
@@ -238,10 +240,12 @@ namespace Dynamo.UI.Views
                             String.Format("{0}.{1}", version.Major, version.Minor));
         }
 
-        protected override async void OnContentRendered(EventArgs e)
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <returns></returns>
+        public async Task InitializeWebView2()
         {
-            base.OnContentRendered(e);
-
             string htmlString = string.Empty;
             string jsonString = string.Empty;
 
@@ -284,12 +288,61 @@ namespace Dynamo.UI.Views
                new ScriptObject(RequestLaunchDynamo, RequestImportSettings, RequestSignIn, RequestSignOut, CloseWindow));
         }
 
+        protected override async void OnContentRendered(EventArgs e)
+        {
+            base.OnContentRendered(e);
+
+            //string htmlString = string.Empty;
+            //string jsonString = string.Empty;
+
+            //// When executing Dynamo as Sandbox or inside any host like Revit, FormIt, Civil3D the WebView2 cache folder will be located in the AppData folder
+            //var userDataDir = new DirectoryInfo(GetUserDirectory());
+            //var webBrowserUserDataFolder = userDataDir.Exists ? userDataDir : null;
+
+            //webView.CreationProperties = new CoreWebView2CreationProperties
+            //{
+            //    UserDataFolder = webBrowserUserDataFolder.FullName
+            //};
+            //await webView.EnsureCoreWebView2Async();
+            //// Context menu disabled
+            //webView.CoreWebView2.Settings.AreDefaultContextMenusEnabled = false;
+            //var assembly = Assembly.GetExecutingAssembly();
+
+            //using (Stream stream = assembly.GetManifestResourceStream(htmlEmbeddedFile))
+            //using (StreamReader reader = new StreamReader(stream))
+            //{
+            //    htmlString = reader.ReadToEnd();
+            //}
+
+            //using (Stream stream = assembly.GetManifestResourceStream(jsEmbeddedFile))
+            //using (StreamReader reader = new StreamReader(stream))
+            //{
+            //    var jsString = reader.ReadToEnd();
+            //    jsonString = jsString;
+            //}
+
+            //using (Stream stream = assembly.GetManifestResourceStream(backgroundImage))
+            //{
+            //    var resourceBase64 = Utilities.ResourceUtilities.ConvertToBase64(stream);
+            //    jsonString = jsonString.Replace("#base64BackgroundImage", $"data:image/{imageFileExtension};base64,{resourceBase64}");
+            //}
+
+            //htmlString = htmlString.Replace("mainJs", jsonString);
+
+            //webView.NavigateToString(htmlString);
+            //webView.CoreWebView2.AddHostObjectToScript("scriptObject",
+            //   new ScriptObject(RequestLaunchDynamo, RequestImportSettings, RequestSignIn, RequestSignOut, CloseWindow));
+        }
+
         internal async void SetBarProperties(string version, string loadingDescription, float barSize)
         {
             var elapsedTime = loadingTimer.ElapsedMilliseconds;
             totalLoadingTime += elapsedTime;
             loadingTimer = Stopwatch.StartNew();
-            await webView.CoreWebView2.ExecuteScriptAsync($"window.setBarProperties('{version}','{loadingDescription}', '{barSize}%', '{Wpf.Properties.Resources.SplashScreenLoadingTimeLabel}: {elapsedTime}ms')");
+            if (webView.CoreWebView2 != null)
+            {
+                await webView.CoreWebView2.ExecuteScriptAsync($"window.setBarProperties('{version}','{loadingDescription}', '{barSize}%', '{Wpf.Properties.Resources.SplashScreenLoadingTimeLabel}: {elapsedTime}ms')");
+            }
         }
 
         internal async void SetLoadingDone()
