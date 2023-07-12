@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -81,6 +81,14 @@ namespace Dynamo.PythonServices
         }
 
         /// <summary>
+        /// Optional install path override
+        /// </summary>
+        public string InstallPath
+        {
+            get; set;
+        }
+
+        /// <summary>
         /// Add an event handler before the Python evaluation begins
         /// </summary>
         /// <param name="callback"></param>
@@ -124,6 +132,18 @@ namespace Dynamo.PythonServices
         /// The actual instance stored in the Singleton class
         /// </summary>
         public static PythonEngineManager Instance { get { return lazy.Value; } }
+
+        /// <summary>
+        /// Easily override the install path for all engines
+        /// </summary>
+        /// <param name="path"></param>
+        public void OverrideInstallPath(string path)
+        {
+            foreach (var e in AvailableEngines)
+            {
+                e.InstallPath = path;
+            }
+        }
         #endregion
 
         /// <summary>

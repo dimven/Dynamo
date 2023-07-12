@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
@@ -340,6 +340,11 @@ for modname,mod in sys.modules.copy().items():
         {
             if (!isPythonInstalled)
             {
+                if (!string.IsNullOrWhiteSpace(Instance.InstallPath))
+                {
+                    Python.Included.Installer.INSTALL_PATH = Instance.InstallPath;
+                }
+
                 Python.Included.Installer.SetupPythonSync();
                 isPythonInstalled = true;
             }

@@ -27,6 +27,7 @@ using System.Runtime.CompilerServices;
 [assembly: InternalsVisibleTo("ViewExtensionLibraryTests")]
 [assembly: InternalsVisibleTo("DynamoPerformanceTests")]
 [assembly: InternalsVisibleTo("PackageManagerTests")]
+[assembly: InternalsVisibleTo("DynamoRevitHeadless")] // Dynamo assembly for design automation
 // Internals are visible to the Package Manager extension
 // For workspace package dependency collection
 [assembly: InternalsVisibleTo("DynamoPackages")]
